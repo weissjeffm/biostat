@@ -1,28 +1,30 @@
 (ns intersections
-  (:use clojure.contrib.combinatorics 
-	clojure.set
-	com.davidsantiago.csv))
+  (:require [clojure.contrib.combinatorics :as combinatorics] 
+	    [clojure.set :as set]
+	    [com.davidsantiago.csv :as csv]
+	    [clojure.contrib.duck-streams :as file]))
 
-(def transpose (partial apply map vector))
+(defn read-sets-from-csv [filename]
+  (let [list-of-sets (map set (csv/parse-csv (slurp filename)))
+	set-labels (take (count list-of-sets) (map str (iterate inc 1)))]
+    (map #(with-meta % {:name %2}) list-of-sets set-labels)))
 
-(defn read-from-csv-columns [filename]
-    (transpose (parse-csv (slurp filename))))
+(defn filtered-subsets [set-list]
+  (filter #(> (count %) 1) (combinatorics/subsets set-list)))
 
-(defn mkmap [indexeditem]
-  (let [index (first indexeditem) 
-	item (second indexeditem) ] 
-    (assoc {} :name index :value item)))
+;; (defn print-intersections [subsetlist]
+;;   (doseq [subset subsetlist] 
+;;     (let [subset-labels (map #(:name (meta %)) subset)
+;; 	  intersection-list (apply set/intersection subset) ]
+;;       (println (str "Intersection of " (seq subset-labels) ": " (seq intersection-list) " (Total: " (count intersection-list) ")")))))
 
-(defn labeled-subsets [list]
-  (let [sets (map set list)]  
-    (filter #(> (count %) 1) 
-	    (subsets (map mkmap (transpose [(take (count sets) (iterate inc 1)) sets]))))))
-
-(defn print-intersections [subsetmapslist]
-  (doseq [subsetmap subsetmapslist] 
-    (let [sets (map :value subsetmap)
-	  intersection-items (apply intersection sets) ]
-      (println (str "Intersection of " (seq (map :name subsetmap)) ": " (seq intersection-items) " (Total: " (count intersection-items) ")")))))
+(defn intersections [sets]
+  (map (fn [subset] 
+	 (let [intr (apply set/intersection subset)]
+	   (concat (map #(:name (meta %)) subset)
+		   (list (str "INTERSECTION:" (count intr)))
+		   intr)))
+       (filtered-subsets sets)))
 
 (defn left-circular [coll] 
   (concat (rest coll) (list (first coll))))
@@ -30,15 +32,20 @@
 (defn rotations [coll]
   (take (count coll) (iterate left-circular coll)))
 
+(defn uniques 
+  "takes a collection of sets, returns a new collection of sets representing the unique items in each set (that don't appear in other sets)" 
+  [coll]
+  (map (fn [rotation] 
+	 (let [uniq (apply set/difference rotation)] 
+	   (concat (list (str "UNIQUES:" (count uniq))) uniq))) 
+       (rotations coll)))
+
 (defn print-uniques 
   [sets]
-  (let [uniques-sets  (map #(apply difference %) (rotations sets)) ]
-    (doseq [unique uniques-sets]
-      (println (str "Unique: " (seq unique))))))
+  (doseq [unique (uniques sets)]
+    (println (str "Uniques in" (:name (meta unique)) ": " (seq unique) ": (Total: " (count unique) ")"))))
 
-(defn venn-diagram [filename]
-  (let [lists (read-from-csv-columns filename)]
-    (print-intersections (labeled-subsets lists))
-    (print-uniques (map set lists))))
-
-
+(defn venn-diagram [input-filename output-filename]
+  (let [sets (read-sets-from-csv input-filename)]
+    (file/spit output-filename (csv/write-csv (uniques sets)))
+    (file/append-spit output-filename (csv/write-csv (intersections sets)))))
