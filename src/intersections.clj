@@ -5,18 +5,13 @@
 	    [clojure.contrib.duck-streams :as file]))
 
 (defn read-sets-from-csv [filename]
-  (let [list-of-sets (map set (csv/parse-csv (slurp filename)))
+  (let [list-of-sets (map #(disj (set %) "") 
+			  (csv/parse-csv (slurp filename)))
 	set-labels (take (count list-of-sets) (map str (iterate inc 1)))]
     (map #(with-meta % {:name %2}) list-of-sets set-labels)))
 
 (defn filtered-subsets [set-list]
   (filter #(> (count %) 1) (combinatorics/subsets set-list)))
-
-;; (defn print-intersections [subsetlist]
-;;   (doseq [subset subsetlist] 
-;;     (let [subset-labels (map #(:name (meta %)) subset)
-;; 	  intersection-list (apply set/intersection subset) ]
-;;       (println (str "Intersection of " (seq subset-labels) ": " (seq intersection-list) " (Total: " (count intersection-list) ")")))))
 
 (defn intersections [sets]
   (map (fn [subset] 
