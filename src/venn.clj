@@ -1,11 +1,11 @@
-(ns intersections
+(ns venn
   (:require [clojure.contrib.combinatorics :as combinatorics] 
 	    [clojure.set :as set]
 	    [com.davidsantiago.csv :as csv]
 	    [clojure.contrib.duck-streams :as file]))
 
 (defn read-sets-from-csv [filename]
-  (let [list-of-sets (map #(disj (set %) "") 
+  (let [list-of-sets (map #(disj (set %) "") ;remove empty string from set
 			  (csv/parse-csv (slurp filename)))
 	set-labels (take (count list-of-sets) (map str (iterate inc 1)))]
     (map #(with-meta % {:name %2}) list-of-sets set-labels)))
@@ -34,11 +34,6 @@
 	 (let [uniq (apply set/difference rotation)] 
 	   (concat (list (str "UNIQUES:" (count uniq))) uniq))) 
        (rotations coll)))
-
-(defn print-uniques 
-  [sets]
-  (doseq [unique (uniques sets)]
-    (println (str "Uniques in" (:name (meta unique)) ": " (seq unique) ": (Total: " (count unique) ")"))))
 
 (defn venn-diagram [input-filename output-filename]
   (let [sets (read-sets-from-csv input-filename)]
