@@ -7,11 +7,11 @@
 (defn read-sets-from-csv [filename]
   (let [list-of-sets (map #(disj (set %) "") ;remove empty string from set
 			  (csv/parse-csv (slurp filename)))
-	set-labels (take (count list-of-sets) (map str (iterate inc 1)))]
-    (map #(with-meta % {:name %2}) list-of-sets set-labels)))
+	set-labels (map str (iterate inc 1))]
+    (map #(with-meta % {:name %2}) list-of-sets set-labels))) ;insert the set number as metadata
 
 (defn- filtered-subsets [set-list]
-  (filter #(> (count %) 1) (combinatorics/subsets set-list)))
+  (filter #(> (count %) 1) (combinatorics/subsets set-list))) ;only want subsets where there's more than 1 item to compare
 
 (defn intersections [sets]
   (map (fn [subset] 
