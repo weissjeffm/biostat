@@ -1,7 +1,7 @@
 (ns venn
   (:require [clojure.contrib.combinatorics :as combinatorics] 
 	    [clojure.set :as set]
-	    [com.davidsantiago.csv :as csv]
+	    [clojure-csv.core :as csv]
 	    [clojure.contrib.duck-streams :as file]))
 
 (defn read-sets-from-csv
@@ -19,12 +19,15 @@
 (defn- filtered-subsets [set-list]
   (filter #(> (count %) 1) (combinatorics/subsets set-list))) ;only want subsets where there's more than 1 item to compare
 
-(defn intersections [sets]
+(defn venn-pieces [sets]
   (map (fn [subset] 
-	 (let [intr (apply set/intersection subset)]
-	   (concat (map #(:name (meta %)) subset)
-		   (list (str "INTERSECTION:" (count intr)))
-		   intr)))
+	 (let [intr (apply set/intersection subset)
+	       other-sets (set/difference (set sets)  subset)
+	       venn-piece (apply set/difference intr other-sets)]
+	   (concat (list (apply str
+			    (interpose "+" (map #(:name (meta %)) subset))))
+		   (list (str "INTERSECTION:" (count venn-piece)))
+		   venn-piece)))
        (filtered-subsets sets)))
 
 (defn- left-circular [coll] 
@@ -45,4 +48,4 @@
   [input-filename output-filename row-headers]
   (let [sets (read-sets-from-csv input-filename row-headers)]
     (file/spit output-filename (csv/write-csv (uniques sets)))
-    (file/append-spit output-filename (csv/write-csv (intersections sets)))))
+    (file/append-spit output-filename (csv/write-csv (venn-pieces sets)))))
