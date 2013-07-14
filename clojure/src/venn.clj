@@ -1,8 +1,7 @@
 (ns venn
-  (:require [clojure.contrib.combinatorics :as combinatorics] 
+  (:require [clojure.math.combinatorics :as combinatorics] 
 	    [clojure.set :as set]
-	    [clojure-csv.core :as csv]
-	    [clojure.contrib.duck-streams :as file]))
+	    [clojure-csv.core :as csv]))
 
 (defn read-sets-from-csv
   ([filename] (read-sets-from-csv filename false))
@@ -29,7 +28,11 @@
   (map #(calc-venn-piece sets %) (filter #(> (count %) 0)
 				      (combinatorics/subsets sets))))
 
-(defn venn-diagram "generates data that can be used to construct a venn diagram. Takes an input file (which should be csv formatted, where each row is a set).  Outputs a file listing counts and data for each area of the diagram. There is no hard limit on the number of input sets." 
-  [input-filename output-filename row-headers]
+(defn venn-diagram "generates data that can be used to construct a
+  venn diagram. Takes an input file (which should be csv formatted,
+  where each row is a set).  Outputs a file listing counts and data
+  for each area of the diagram. There is no hard limit on the number
+  of input sets."  [input-filename output-filename row-headers]
   (let [sets (read-sets-from-csv input-filename row-headers)]
-    (file/spit output-filename (csv/write-csv (venn-pieces sets)))))
+    (println "Sets: " (count sets))
+    (spit output-filename (csv/write-csv (venn-pieces sets)))))
